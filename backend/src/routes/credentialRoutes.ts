@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { credentialService } from '../services/credentialService';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const router = Router();
 

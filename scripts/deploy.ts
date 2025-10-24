@@ -1,4 +1,6 @@
 import { ethers } from "hardhat";
+import dotenv from "dotenv";
+dotenv.config();
 
 async function main() {
   console.log("Deploying SkillCredentialFactory...");
@@ -6,9 +8,9 @@ async function main() {
   const SkillCredentialFactory = await ethers.getContractFactory("SkillCredentialFactory");
   const factory = await SkillCredentialFactory.deploy();
   
-  await factory.deployed();
+  await factory.waitForDeployment();
   
-  console.log("SkillCredentialFactory deployed to:", factory.address);
+  console.log("SkillCredentialFactory deployed to:", await factory.getAddress());
   
   // Create sample credential templates
   console.log("Creating credential templates...");

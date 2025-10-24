@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { pool } from '../config/database';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export interface AuthenticatedRequest extends Request {
   user?: {

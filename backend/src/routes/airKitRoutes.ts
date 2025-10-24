@@ -4,6 +4,8 @@ import { validateRequest, userRegistrationSchema } from '../middleware/validatio
 import { CredentialModel } from '../models/Credential';
 import { ProofModel } from '../models/Proof';
 import { pool } from '../config/database';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // --- WARNING: DEVELOPMENT MOCK ---
 // The real `airAccount` and `airCredential` imports are removed due to package errors.
@@ -29,7 +31,7 @@ const airAccount = {
   }),
   getCrossChainIdentity: async (airId: string) => ({
     universalId: airId,
-    connectedChains: [{ chain: 'moca', address: '0x123' }, { chain: 'eth', address: '0x456' }],
+    connectedChains: [{ chain: 'moca', address: '0x366a8' }, { chain: 'eth', address: '0x456' }],
     primaryChain: 'moca',
     identityState: 'Active',
   }),

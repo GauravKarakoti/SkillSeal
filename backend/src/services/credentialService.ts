@@ -1,4 +1,6 @@
 import axios from 'axios';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // This is a LIKELY endpoint. You MUST find the correct URL
 // in the Moca Network developer documentation.

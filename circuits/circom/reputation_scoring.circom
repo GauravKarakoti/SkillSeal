@@ -1,59 +1,58 @@
 pragma circom 2.1.0;
 
-include "node_modules/circomlib/circuits/comparators.circom";
+include "../../node_modules/circomlib/circuits/comparators.circom";
 
+/*
+* This circuit checks if a weighted average score meets a minimum threshold.
+* The division is computed outside the circuit and verified inside.
+*/
 template ReputationScore() {
+    // --- Public Inputs ---
+    signal input minimumScore;
+    
+    // --- Private Inputs ---
     signal input credentials[10];
     signal input weights[10];
-    signal input minimumScore;
+    signal input averageScore;
+
+    // --- Output ---
     signal output meetsThreshold;
     
-    // Calculate weighted score
-    signal weightedSum;
-    signal totalWeight;
+    // --- Constraints ---
     
-    weightedSum <== 0;
-    totalWeight <== 0;
+    // 1. Calculate weightedSum and totalWeight
+    
+    // Use a signal array for the quadratic running sum (size N+1)
+    signal weightedSum[11];
+    
+    // Use a 'var' for the linear sum (totalWeight)
+    var totalWeight;
+    
+    // Initialize both
+    weightedSum[0] <== 0;
+    totalWeight = 0; 
     
     for (var i = 0; i < 10; i++) {
-        weightedSum += credentials[i] * weights[i];
+        // Create a constraint for each step of the quadratic sum
+        weightedSum[i+1] <== weightedSum[i] + credentials[i] * weights[i];
+        
+        // Accumulate the linear var
         totalWeight += weights[i];
     }
     
-    signal averageScore;
-    averageScore <== weightedSum / totalWeight;
+    // 2. Create the final constraint
+    // Use the *last element* of the signal array
+    // This constraint is (weightedSum[10] === averageScore * totalWeight)
+    // which is (signal === signal * linear_var), a valid quadratic constraint.
+    weightedSum[10] === averageScore * totalWeight;
     
-    // Compare with minimum threshold
+    // 3. Compare the verified averageScore with the public minimumScore
     component scoreCheck = GreaterEqThan(32);
     scoreCheck.in[0] <== averageScore;
     scoreCheck.in[1] <== minimumScore;
     
+    // 4. Output the result (1 if >=, 0 if <)
     meetsThreshold <== scoreCheck.out;
 }
 
-template GreaterEqThan(bits) {
-    signal input in[2];
-    signal output out;
-    
-    component lt = LessThan(bits);
-    lt.in[0] <== in[0];
-    lt.in[1] <== in[1];
-    
-    out <== 1 - lt.out;
-}
-
-template LessThan(bits) {
-    signal input in[2];
-    signal output out;
-    
-    signal diff;
-    diff <== in[0] - in[1];
-    
-    // Check if diff is negative (in[0] < in[1])
-    component rangeCheck = Num2Bits(bits+1);
-    rangeCheck.in <== diff + (1 << bits);
-    
-    out <== rangeCheck.out[bits];
-}
-
-component main = ReputationScore();
+component main { public [ minimumScore ] } = ReputationScore();

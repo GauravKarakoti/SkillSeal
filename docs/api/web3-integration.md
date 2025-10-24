@@ -5,7 +5,7 @@
 ### Moca Testnet
 ```javascript
 const CONTRACT_ADDRESSES = {
-  SkillCredentialFactory: "0x1234567890abcdef...",
+  SkillCredentialFactory: "0x4Ba3C92D96Cc2C377a5ffca32e0BC43CF67a83b3",
   ReputationStaking: "0x234567890abcdef1...",
   ZKPVerifier: "0x34567890abcdef12..."
 };

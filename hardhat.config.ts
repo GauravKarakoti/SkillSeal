@@ -1,10 +1,11 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "@nomiclabs/hardhat-waffle";
+import dotenv from "dotenv";
+dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
@@ -14,7 +15,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     moca_testnet: {
-      url: process.env.MOCA_TESTNET_RPC_URL || "http://testnet-rpc.mocachain.org",
+      url: process.env.MOCA_TESTNET_RPC_URL || "https://testnet-rpc.mocachain.org",
       accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : []
     }
   }
