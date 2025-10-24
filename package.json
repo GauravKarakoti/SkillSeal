@@ -1,0 +1,47 @@
+{
+  "name": "skillseal",
+  "version": "1.0.0",
+  "description": "SkillSeal leverages the Moca Network to empower freelancers with a self-sovereign, portable, and privacy-preserving professional identity. We allow users to collect verifiable credentials from clients and prove their qualifications without exposing sensitive personal data.",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "contracts",
+    "circuits"
+  ],
+  "scripts": {
+    "build": "lerna run build",
+    "test": "lerna run test",
+    "deploy": "lerna run deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GauravKarakoti/SkillSeal.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/GauravKarakoti/SkillSeal/issues"
+  },
+  "homepage": "https://github.com/GauravKarakoti/SkillSeal#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "chai": "^4.5.0",
+    "concurrently": "^9.2.1",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.26.3",
+    "husky": "^9.1.7",
+    "lerna": "^9.0.0"
+  },
+  "dependencies": {
+    "@mocanetwork/airkit": "^1.6.0",
+    "@openzeppelin/contracts": "^5.4.0"
+  }
+}

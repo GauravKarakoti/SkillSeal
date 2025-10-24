@@ -1,0 +1,39 @@
+name: ZKP Circuit Testing
+
+on:
+  push:
+    paths: ['circuits/**']
+  pull_request:
+    paths: ['circuits/**']
+
+jobs:
+  test-circuits:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: 'circuits/package-lock.json'
+    
+    - name: Install Circom dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libgmp-dev nlohmann-json3-dev nasm
+        npm install -g circom snarkjs
+        
+    - name: Install circuit dependencies
+      working-directory: ./circuits
+      run: npm ci
+    
+    - name: Compile circuits
+      working-directory: ./circuits
+      run: npm run compile
+    
+    - name: Run circuit tests
+      working-directory: ./circuits
+      run: npm test
