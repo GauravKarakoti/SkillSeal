@@ -38,6 +38,20 @@ async function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_staking_info_tier ON staking_info(staking_tier);
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_wallets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) NOT NULL,
+        wallet_address VARCHAR(255) UNIQUE NOT NULL,
+        chain VARCHAR(50) NOT NULL,
+        connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_primary BOOLEAN DEFAULT FALSE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_wallets_user_id ON user_wallets(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_wallets_address ON user_wallets(wallet_address);
+    `);
+
     console.log('Migrations completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error);

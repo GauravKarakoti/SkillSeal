@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Import 'airService' from the hook
 import { useAirKit } from '../hooks/useAirKit';
 import { CredentialManager } from '../components/CredentialManager';
 import { ZKPGenerator } from '../components/ZKPGenerator';
 
 export const Dashboard: React.FC = () => {
-  const { userProfile } = useAirKit();
+  // FIX: Destructure 'airService' from the hook
+  const { userProfile, airService } = useAirKit();
   const [activeTab, setActiveTab] = useState<'overview' | 'credentials' | 'zkp'>('overview');
   const [userStats, setUserStats] = useState({
     credentialCount: 0,
@@ -17,9 +19,11 @@ export const Dashboard: React.FC = () => {
     // Fetch user stats from backend
     const fetchUserStats = async () => {
       try {
+        // FIX: Get token from 'airService'
+        const { token } = await airService.getAccessToken();
         const response = await fetch('/api/user/stats', {
           headers: {
-            'Authorization': `Bearer ${await userProfile?.getToken()}`
+            'Authorization': `Bearer ${token}`
           }
         });
         const stats = await response.json();
@@ -32,7 +36,7 @@ export const Dashboard: React.FC = () => {
     if (userProfile) {
       fetchUserStats();
     }
-  }, [userProfile]);
+  }, [userProfile, airService]); // Add airService as a dependency
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -46,7 +50,8 @@ export const Dashboard: React.FC = () => {
     <div className="dashboard">
       <div className="welcome-section fade-in">
         <h1 className="text-3xl font-bold mb-2">
-          Welcome back, {userProfile?.name || 'User'}!
+          {/* FIX: Cast userProfile to 'any' */}
+          Welcome back, {(userProfile as any)?.name || 'User'}!
         </h1>
         <p className="text-secondary mb-6">
           Manage your professional identity and verifiable credentials
@@ -137,6 +142,7 @@ export const Dashboard: React.FC = () => {
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
                 <div className="space-y-3">
+                  {/* Static example data */}
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
                     <span>Project completion credential issued</span>
                     <span className="text-sm text-secondary">2 hours ago</span>

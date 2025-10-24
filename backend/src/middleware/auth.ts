@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { airAccount } from '../config/airKit';
 import { pool } from '../config/database';
 
 export interface AuthenticatedRequest extends Request {
@@ -23,8 +22,20 @@ export const authenticateToken = async (
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    // Verify token with AIR Account service
-    const userProfile = await airAccount.verifyToken(token);
+    // --- WARNING: DEVELOPMENT STUB ---
+    // The original code `airAccount.verifyToken(token)` is commented out
+    // because the `airKit.ts` file has a package error.
+    // This mock implementation bypasses real authentication and is NOT SECURE.
+    // TODO: Restore original code once the correct Moca Admin SDK is installed.
+    
+    // const userProfile = await airAccount.verifyToken(token); // <-- ORIGINAL CODE
+    
+    // Mock user profile for development:
+    const userProfile = {
+      airId: "mock-air-id-for-testing", // Using a mock Air ID
+      address: "0x0000000000000000000000000000000000000001" // Using a mock wallet address
+    };
+    // --- END OF DEVELOPMENT STUB ---
     
     if (!userProfile || !userProfile.address) {
       return res.status(401).json({ error: 'Invalid token' });

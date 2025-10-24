@@ -7,6 +7,8 @@ import { Profile } from './pages/Profile';
 import { Navigation } from './components/Navigation';
 import { useAirKit } from './hooks/useAirKit';
 import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ReputationDashboard } from './pages/ReputationDashboard';
 
 const queryClient = new QueryClient();
 

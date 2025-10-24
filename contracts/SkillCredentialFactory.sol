@@ -2,14 +2,14 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract SkillCredentialFactory is AccessControl {
-    using Counters for Counters.Counter;
+    // using Counters for Counters.Counter; // <-- REMOVED
     
     bytes32 public constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
     
-    Counters.Counter private _credentialIdCounter;
+    // Counters.Counter private _credentialIdCounter; // <-- REPLACED
+    uint256 private _credentialIdCounter; // <-- ADDED
     
     struct CredentialTemplate {
         string credentialType;
@@ -68,8 +68,11 @@ contract SkillCredentialFactory is AccessControl {
         CredentialTemplate memory template = credentialTemplates[_credentialType];
         require(template.isActive, "Credential template not active");
         
-        _credentialIdCounter.increment();
-        uint256 newCredentialId = _credentialIdCounter.current();
+        // _credentialIdCounter.increment(); // <-- REPLACED
+        _credentialIdCounter++; // <-- ADDED
+        
+        // uint256 newCredentialId = _credentialIdCounter.current(); // <-- REPLACED
+        uint256 newCredentialId = _credentialIdCounter; // <-- ADDED
         
         credentialRecords[newCredentialId] = CredentialRecord({
             credentialId: newCredentialId,
@@ -105,6 +108,7 @@ contract SkillCredentialFactory is AccessControl {
     }
     
     function getCredentialCount() external view returns (uint256) {
-        return _credentialIdCounter.current();
+        // return _credentialIdCounter.current(); // <-- REPLACED
+        return _credentialIdCounter; // <-- ADDED
     }
 }

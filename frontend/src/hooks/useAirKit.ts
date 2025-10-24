@@ -1,46 +1,88 @@
-import { useState, useEffect } from 'react';
-import { airAccount, airCredential } from '../utils/airKitConfig';
+import { useState, useEffect, useCallback } from 'react';
+// Import the new service and init function
+import { airService, initializeAirKit as initAirKitService } from '../utils/airKitConfig';
+// Import the types we need
+import type { AirUserDetails } from '@mocanetwork/airkit';
 
 export const useAirKit = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(airService.isInitialized);
+  const [isLoggedIn, setIsLoggedIn] = useState(airService.isLoggedIn);
+  // This will now store the full user details, not just the login result
+  const [userProfile, setUserProfile] = useState<AirUserDetails | null>(null);
 
-  useEffect(() => {
-    initializeAirKit();
+  // Define a memoized function to fetch user info
+  const fetchUserInfo = useCallback(async () => {
+    if (airService.isLoggedIn) {
+      try {
+        const info = await airService.getUserInfo();
+        setUserProfile(info);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("Failed to fetch user info:", error);
+        setUserProfile(null);
+        setIsLoggedIn(false);
+      }
+    }
   }, []);
 
-  const initializeAirKit = async () => {
-    try {
-      await airAccount.initialize();
-      setIsInitialized(true);
-      
-      // Check if user is already logged in
-      const profile = await airAccount.getCurrentUser();
-      if (profile) {
-        setUserProfile(profile);
+  useEffect(() => {
+    const initialize = async () => {
+      if (!airService.isInitialized) {
+        await initAirKitService();
+        setIsInitialized(true);
       }
+      // Sync login state
+      setIsLoggedIn(airService.isLoggedIn);
+      // Fetch user info if already logged in
+      if (airService.isLoggedIn) {
+        fetchUserInfo();
+      }
+    };
+
+    initialize();
+
+    // Set up an event listener
+    const listener = (event: string, data: any) => {
+      if (event === 'login') {
+        setIsLoggedIn(true);
+        fetchUserInfo(); // Fetch details on login
+      } else if (event === 'logout') {
+        setIsLoggedIn(false);
+        setUserProfile(null);
+      }
+    };
+    
+    airService.on(listener);
+    // Cleanup listener
+    return () => airService.off(listener);
+  }, [fetchUserInfo]); // Add fetchUserInfo as dependency
+
+  const login = async () => {
+    try {
+      // Login will trigger the 'login' event, which calls fetchUserInfo
+      await airService.login();
     } catch (error) {
-      console.error('Failed to initialize AIR Kit:', error);
+      console.error("AirKit Login failed:", error);
+      setIsLoggedIn(false);
+      setUserProfile(null);
     }
   };
 
-  const login = async () => {
-    const profile = await airAccount.login();
-    setUserProfile(profile);
-    return profile;
-  };
-
   const logout = async () => {
-    await airAccount.logout();
-    setUserProfile(null);
+    try {
+      // Logout will trigger the 'logout' event
+      await airService.logout();
+    } catch (error) {
+      console.error("AirKit Logout failed:", error);
+    }
   };
 
   return {
     isInitialized,
-    userProfile,
+    isLoggedIn,
+    userProfile, // This is now AirUserDetails | null (which has .address)
     login,
     logout,
-    airAccount,
-    airCredential
+    airService // The single service instance
   };
 };

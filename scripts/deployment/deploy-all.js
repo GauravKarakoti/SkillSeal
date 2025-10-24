@@ -1,4 +1,3 @@
-const { ethers } = require('ethers');
 const { execSync } = require('child_process');
 
 async function deployAll() {

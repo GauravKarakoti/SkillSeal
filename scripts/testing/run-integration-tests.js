@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
 const axios = require('axios');
 
 class IntegrationTester {

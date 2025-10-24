@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Import 'airService' from the hook
 import { useAirKit } from '../hooks/useAirKit';
 
 interface ZKProofTemplate {
@@ -27,7 +28,8 @@ interface GeneratedProof {
 }
 
 export const ZKPGenerator: React.FC = () => {
-  const { userProfile, airCredential } = useAirKit();
+  // FIX: Use 'airService' from the hook. 'airCredential' no longer exists.
+  const { userProfile, airService } = useAirKit();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedTemplate, setSelectedTemplate] = useState<ZKProofTemplate | null>(null);
   const [privateInputs, setPrivateInputs] = useState<Record<string, any>>({});
@@ -121,22 +123,36 @@ export const ZKPGenerator: React.FC = () => {
   ];
 
   useEffect(() => {
-    fetchUserCredentials();
-    fetchRecentProofs();
-  }, [userProfile]);
+    // Only fetch if logged in
+    if (userProfile) {
+      fetchUserCredentials();
+      fetchRecentProofs();
+    } else {
+      // Clear data if logged out
+      setUserCredentials([]);
+      setGeneratedProofs([]);
+    }
+  }, [userProfile]); // Rerun when userProfile changes
 
   const fetchUserCredentials = async () => {
     if (!userProfile) return;
     
     try {
-      const token = await userProfile.getToken();
+      // FIX: Get token from airService
+      const { token } = await airService.getAccessToken();
       const response = await fetch('/api/credentials', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setUserCredentials(data.credentials || []);
+      if (data.success) {
+        setUserCredentials(data.credentials || []);
+      } else {
+        console.error('API failed to fetch credentials:', data.error);
+        setUserCredentials([]);
+      }
     } catch (error) {
       console.error('Failed to fetch credentials:', error);
+      setUserCredentials([]);
     }
   };
 
@@ -144,14 +160,21 @@ export const ZKPGenerator: React.FC = () => {
     if (!userProfile) return;
     
     try {
-      const token = await userProfile.getToken();
+      // FIX: Get token from airService
+      const { token } = await airService.getAccessToken();
       const response = await fetch('/api/zkp/proofs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setGeneratedProofs(data.proofs || []);
+      if (data.success) {
+        setGeneratedProofs(data.proofs || []);
+      } else {
+        console.error('API failed to fetch proofs:', data.error);
+        setGeneratedProofs([]);
+      }
     } catch (error) {
       console.error('Failed to fetch proofs:', error);
+      setGeneratedProofs([]);
     }
   };
 
@@ -183,11 +206,11 @@ export const ZKPGenerator: React.FC = () => {
     }
   };
 
-  const canGenerateProof = () => {
-    if (!selectedTemplate) return false;
+  // Memoize this function to avoid recalculating on every render
+  const canGenerateProofForTemplate = React.useCallback((template: ZKProofTemplate | null) => {
+    if (!template) return false;
     
-    // Check if user meets template requirements
-    const { requirements } = selectedTemplate;
+    const { requirements } = template;
     
     if (requirements.minCredentials && userCredentials.length < requirements.minCredentials) {
       return false;
@@ -195,22 +218,29 @@ export const ZKPGenerator: React.FC = () => {
     
     if (requirements.requiredTypes) {
       const hasRequiredTypes = requirements.requiredTypes.some(type =>
-        userCredentials.some(cred => cred.credentialType === type)
+        userCredentials.some(cred => cred.type === type) // Check 'type', not 'credentialType' from backend
       );
       if (!hasRequiredTypes) return false;
     }
     
+    // Add reputation check if needed (requires fetching reputation score)
+    // if (requirements.minReputation && userReputation < requirements.minReputation) {
+    //   return false;
+    // }
+
     return true;
-  };
+  }, [userCredentials]); // Dependency: userCredentials
 
   const generateProof = async () => {
-    if (!selectedTemplate || !userProfile || !canGenerateProof()) return;
+    // Check template, profile, and ability to generate *before* proceeding
+    if (!selectedTemplate || !userProfile || !canGenerateProofForTemplate(selectedTemplate)) return;
     
     setIsGenerating(true);
     try {
-      const token = await userProfile.getToken();
+      // FIX: Get token from airService
+      const { token } = await airService.getAccessToken();
       
-      const response = await fetch('/api/zkp/generate', {
+      const response = await fetch('/api/airkit/zkp/generate', { // Correct API endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,11 +250,18 @@ export const ZKPGenerator: React.FC = () => {
           circuit: selectedTemplate.circuit,
           privateInputs: {
             ...privateInputs,
-            credentialIds: userCredentials.map(cred => cred.id)
+            // Pass credentials as expected by the backend
+             credentials: userCredentials.map(cred => ({
+               id: cred.id, // Assuming 'id' is the property name
+               type: cred.type,
+               data: cred.attributes, // Assuming 'attributes' holds the data
+               issuedAt: cred.issuedAt
+             }))
           },
           publicInputs: {
             ...publicInputs,
-            subject: userProfile.address,
+            // FIX: Cast userProfile to 'any' to access '.address'
+            subject: (userProfile as any).address,
             generationDate: new Date().toISOString()
           }
         })
@@ -233,13 +270,14 @@ export const ZKPGenerator: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
+        // Use the proof structure returned by the backend API
         const newProof: GeneratedProof = {
-          proofId: result.proofId,
-          circuit: selectedTemplate.circuit,
-          proofData: result.proofData,
-          publicInputs: result.publicInputs,
-          createdAt: new Date().toISOString(),
-          verificationUrl: result.verificationUrl
+          proofId: result.proof.proofId,
+          circuit: result.proof.circuit,
+          proofData: result.proof.proofData,
+          publicInputs: result.proof.publicInputs,
+          createdAt: result.proof.generatedAt, // Use backend generated time
+          verificationUrl: result.proof.verificationUrl
         };
         
         setGeneratedProofs(prev => [newProof, ...prev]);
@@ -249,7 +287,13 @@ export const ZKPGenerator: React.FC = () => {
       }
     } catch (error) {
       console.error('Proof generation failed:', error);
-      alert(`Proof generation failed: ${error.message}`);
+      
+      let errorMessage = 'An unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      alert(`Proof generation failed: ${errorMessage}`);
+
     } finally {
       setIsGenerating(false);
     }
@@ -308,37 +352,40 @@ export const ZKPGenerator: React.FC = () => {
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {proofTemplates.map(template => (
-                <div
-                  key={template.id}
-                  className={`zkp-option ${canGenerateProof() ? '' : 'opacity-50'}`}
-                  onClick={() => canGenerateProof() && handleTemplateSelect(template)}
-                >
-                  <h3 className="font-semibold text-lg mb-2">{template.name}</h3>
-                  <p className="text-sm text-secondary mb-3">{template.description}</p>
-                  
-                  <div className="requirements">
-                    <span className="text-xs font-medium text-primary">Requirements:</span>
-                    <ul className="text-xs text-secondary mt-1 space-y-1">
-                      {template.requirements.minCredentials && (
-                        <li>• Minimum {template.requirements.minCredentials} credential(s)</li>
-                      )}
-                      {template.requirements.requiredTypes && (
-                        <li>• {template.requirements.requiredTypes.join(', ')} credentials</li>
-                      )}
-                      {template.requirements.minReputation && (
-                        <li>• Minimum {template.requirements.minReputation} reputation score</li>
-                      )}
-                    </ul>
-                  </div>
-                  
-                  {!canGenerateProof() && (
-                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                      You don't meet the requirements for this proof template
+              {proofTemplates.map(template => {
+                const canGenerate = canGenerateProofForTemplate(template); // Check eligibility here
+                return (
+                  <div
+                    key={template.id}
+                    className={`zkp-option ${canGenerate ? 'cursor-pointer hover:border-blue-500' : 'opacity-50 cursor-not-allowed'}`}
+                    onClick={() => canGenerate && handleTemplateSelect(template)}
+                  >
+                    <h3 className="font-semibold text-lg mb-2">{template.name}</h3>
+                    <p className="text-sm text-secondary mb-3">{template.description}</p>
+                    
+                    <div className="requirements">
+                      <span className="text-xs font-medium text-primary">Requirements:</span>
+                      <ul className="text-xs text-secondary mt-1 space-y-1">
+                        {template.requirements.minCredentials && (
+                          <li>• Minimum {template.requirements.minCredentials} credential(s)</li>
+                        )}
+                        {template.requirements.requiredTypes && (
+                          <li>• Needs: {template.requirements.requiredTypes.join(', ')}</li>
+                        )}
+                        {template.requirements.minReputation && (
+                          <li>• Minimum {template.requirements.minReputation} reputation</li>
+                        )}
+                      </ul>
                     </div>
-                  )}
-                </div>
-              ))}
+                    
+                    {!canGenerate && (
+                      <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                        You don't meet the requirements for this proof template.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -371,15 +418,15 @@ export const ZKPGenerator: React.FC = () => {
                       {input.type === 'number' ? (
                         <input
                           type="number"
-                          value={privateInputs[input.key] || ''}
-                          onChange={(e) => handleInputChange('private', input.key, parseInt(e.target.value))}
+                          value={privateInputs[input.key] ?? ''} // Use nullish coalescing for default empty string
+                          onChange={(e) => handleInputChange('private', input.key, e.target.value === '' ? '' : parseInt(e.target.value))}
                           className="form-input"
                           min="0"
                         />
                       ) : (
                         <input
                           type="text"
-                          value={privateInputs[input.key] || ''}
+                          value={privateInputs[input.key] ?? ''}
                           onChange={(e) => handleInputChange('private', input.key, e.target.value)}
                           className="form-input"
                           placeholder={`Enter ${input.label.toLowerCase()}`}
@@ -404,15 +451,15 @@ export const ZKPGenerator: React.FC = () => {
                       {input.type === 'number' ? (
                         <input
                           type="number"
-                          value={publicInputs[input.key] || ''}
-                          onChange={(e) => handleInputChange('public', input.key, parseInt(e.target.value))}
+                          value={publicInputs[input.key] ?? ''}
+                          onChange={(e) => handleInputChange('public', input.key, e.target.value === '' ? '' : parseInt(e.target.value))}
                           className="form-input"
                           min="0"
                         />
                       ) : (
                         <input
                           type="text"
-                          value={publicInputs[input.key] || ''}
+                          value={publicInputs[input.key] ?? ''}
                           onChange={(e) => handleInputChange('public', input.key, e.target.value)}
                           className="form-input"
                           placeholder={`Enter ${input.label.toLowerCase()}`}
@@ -437,7 +484,8 @@ export const ZKPGenerator: React.FC = () => {
               </button>
               <button 
                 onClick={generateProof}
-                disabled={isGenerating}
+                // Disable if generating or if requirements not met
+                disabled={isGenerating || !canGenerateProofForTemplate(selectedTemplate)} 
                 className="btn btn-primary"
               >
                 {isGenerating ? (

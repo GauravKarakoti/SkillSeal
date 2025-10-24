@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+// FIX: Import 'airService' from the hook
 import { useAirKit } from '../hooks/useAirKit';
 
 export const Navigation: React.FC = () => {
-  const { userProfile, logout, airAccount } = useAirKit();
+  // FIX: Destructure 'airService' from the hook
+  const { userProfile, logout, airService } = useAirKit();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userStats, setUserStats] = useState({
@@ -20,7 +22,8 @@ export const Navigation: React.FC = () => {
 
   const fetchUserStats = async () => {
     try {
-      const token = await userProfile?.getToken();
+      // FIX: Get token from 'airService', not 'userProfile'
+      const { token } = await airService.getAccessToken();
       const response = await fetch('/api/user/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -99,7 +102,8 @@ export const Navigation: React.FC = () => {
             <div className="hidden lg:flex items-center space-x-4">
               <div className="text-right">
                 <div className="text-sm font-medium text-gray-900">
-                  {userProfile?.name || 'User'}
+                  {/* FIX: Cast to 'any' to bypass incomplete type definition */}
+                  {(userProfile as any)?.name || 'User'}
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
                   <span>{userStats.credentialCount} credentials</span>
@@ -130,7 +134,8 @@ export const Navigation: React.FC = () => {
                 className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
               >
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                  {userProfile?.name?.charAt(0) || 'U'}
+                  {/* FIX: Cast to 'any' */}
+                  {(userProfile as any)?.name?.charAt(0) || 'U'}
                 </div>
                 <svg 
                   className={`w-4 h-4 text-gray-500 transition-transform ${
@@ -149,8 +154,9 @@ export const Navigation: React.FC = () => {
                 <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                   {/* User Info */}
                   <div className="px-4 py-3 border-b border-gray-100">
-                    <div className="font-medium text-gray-900">{userProfile?.name || 'User'}</div>
-                    <div className="text-sm text-gray-500 truncate">{userProfile?.address}</div>
+                    {/* FIX: Cast to 'any' */}
+                    <div className="font-medium text-gray-900">{(userProfile as any)?.name || 'User'}</div>
+                    <div className="text-sm text-gray-500 truncate">{(userProfile as any)?.address}</div>
                     <div className="flex items-center space-x-2 mt-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTierColor(userStats.tier)}`}>
                         {userStats.tier} Tier
@@ -266,10 +272,12 @@ export const Navigation: React.FC = () => {
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                  {userProfile?.name?.charAt(0) || 'U'}
+                  {/* FIX: Cast to 'any' */}
+                  {(userProfile as any)?.name?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">{userProfile?.name || 'User'}</div>
+                  {/* FIX: Cast to 'any' */}
+                  <div className="font-medium text-gray-900">{(userProfile as any)?.name || 'User'}</div>
                   <div className="text-sm text-gray-500">Connected</div>
                 </div>
               </div>

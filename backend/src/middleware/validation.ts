@@ -10,7 +10,7 @@ export const validateRequest = (schema: z.ZodSchema) => {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           error: 'Validation failed',
-          details: error.errors
+          details: error.issues
         });
       }
       next(error);
@@ -22,14 +22,16 @@ export const validateRequest = (schema: z.ZodSchema) => {
 export const credentialIssueSchema = z.object({
   subject: z.string().min(1, 'Subject is required'),
   credentialType: z.string().min(1, 'Credential type is required'),
-  attributes: z.record(z.any()),
+  // FIX: z.record() needs both a key type (z.string()) and a value type (z.any())
+  attributes: z.record(z.string(), z.any()),
   expiration: z.string().optional()
 });
 
 export const proofGenerationSchema = z.object({
   circuit: z.string().min(1, 'Circuit type is required'),
-  privateInputs: z.record(z.any()),
-  publicInputs: z.record(z.any()).optional()
+  // FIX: z.record() needs both a key type (z.string()) and a value type (z.any())
+  privateInputs: z.record(z.string(), z.any()),
+  publicInputs: z.record(z.string(), z.any()).optional() // Also fixed here
 });
 
 export const userRegistrationSchema = z.object({
