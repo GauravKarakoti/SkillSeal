@@ -140,7 +140,7 @@ export const ZKPGenerator: React.FC = () => {
     try {
       // FIX: Get token from airService
       const { token } = await airService.getAccessToken();
-      const response = await fetch('/api/credentials', {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/credentials`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -162,7 +162,7 @@ export const ZKPGenerator: React.FC = () => {
     try {
       // FIX: Get token from airService
       const { token } = await airService.getAccessToken();
-      const response = await fetch('/api/zkp/proofs', {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/zkp/proofs`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -240,7 +240,7 @@ export const ZKPGenerator: React.FC = () => {
       // FIX: Get token from airService
       const { token } = await airService.getAccessToken();
       
-      const response = await fetch('/api/airkit/zkp/generate', { // Correct API endpoint
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/zkp/generate`, { // Correct API endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -361,11 +361,11 @@ export const ZKPGenerator: React.FC = () => {
                     onClick={() => canGenerate && handleTemplateSelect(template)}
                   >
                     <h3 className="font-semibold text-lg mb-2">{template.name}</h3>
-                    <p className="text-sm text-secondary mb-3">{template.description}</p>
+                    <p className="text-sm mb-3">{template.description}</p>
                     
                     <div className="requirements">
-                      <span className="text-xs font-medium text-primary">Requirements:</span>
-                      <ul className="text-xs text-secondary mt-1 space-y-1">
+                      <span className="text-xs font-bold text-primary">Requirements:</span>
+                      <ul className="text-xs mt-1 space-y-1">
                         {template.requirements.minCredentials && (
                           <li>• Minimum {template.requirements.minCredentials} credential(s)</li>
                         )}

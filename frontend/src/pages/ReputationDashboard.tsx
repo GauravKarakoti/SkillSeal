@@ -72,7 +72,7 @@ export const ReputationDashboard: React.FC = () => {
     try {
       // FIX: Get token from airService
       const { token } = await airService.getAccessToken();
-      const response = await fetch('/api/reputation/score', { // Assuming this endpoint exists
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/reputation/score`, { // Assuming this endpoint exists
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -159,7 +159,7 @@ export const ReputationDashboard: React.FC = () => {
       const { token } = await airService.getAccessToken();
 
       // Call the backend ZKP generation endpoint
-      const response = await fetch('/api/airkit/zkp/generate', {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/zkp/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

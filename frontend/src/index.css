@@ -78,8 +78,8 @@ select:focus-visible {
 .min-h-screen { min-height: 100vh; }
 
 /* Color Utilities */
-.text-primary { color: #4f46e5; }
-.text-secondary { color: #6b7280; }
+.text-primary { color: #8581da; }
+.text-secondary { color: #363a41; }
 .text-success { color: #10b981; }
 .text-warning { color: #f59e0b; }
 .text-error { color: #ef4444; }

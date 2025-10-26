@@ -21,7 +21,7 @@ export const Dashboard: React.FC = () => {
       try {
         // FIX: Get token from 'airService'
         const { token } = await airService.getAccessToken();
-        const response = await fetch('/api/user/stats', {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/stats`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -140,14 +140,14 @@ export const Dashboard: React.FC = () => {
               </div>
 
               <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Recent Activity</h3>
                 <div className="space-y-3">
                   {/* Static example data */}
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded text-gray-700">
                     <span>Project completion credential issued</span>
                     <span className="text-sm text-secondary">2 hours ago</span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded text-gray-700">
                     <span>Reputation proof generated</span>
                     <span className="text-sm text-secondary">1 day ago</span>
                   </div>

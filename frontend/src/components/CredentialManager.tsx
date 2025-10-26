@@ -25,7 +25,7 @@ export const CredentialManager: React.FC = () => {
       };
 
       // Call your backend API to issue the credential
-      const response = await fetch('/api/airkit/credential/issue', {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/credential/issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ export const CredentialManager: React.FC = () => {
       const { token } = await airService.getAccessToken();
 
       // Call your backend API to generate the proof
-      const response = await fetch('/api/airkit/zkp/generate', {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/zkp/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,12 +94,12 @@ export const CredentialManager: React.FC = () => {
   };
 
   if (!userProfile) {
-    return <div>Please log in to manage credentials.</div>;
+    return <div className='text-gray-800'>Please log in to manage credentials.</div>;
   }
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Your Credentials</h2>
+      <h2 className="text-xl font-bold mb-4 text-gray-800">Your Credentials</h2>
       
       <button
         onClick={issueSampleCredential}

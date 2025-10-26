@@ -29,7 +29,7 @@ export const Profile: React.FC = () => {
       try {
         // FIX: Get token from 'airService'
         const { token } = await airService.getAccessToken();
-        const response = await fetch('/api/user/profile', { // Assuming this endpoint exists
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, { // Assuming this endpoint exists
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -66,7 +66,7 @@ export const Profile: React.FC = () => {
     try {
       // FIX: Get token from 'airService'
       const { token } = await airService.getAccessToken();
-      const response = await fetch('/api/user/profile', { // Assuming this endpoint exists
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, { // Assuming this endpoint exists
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
