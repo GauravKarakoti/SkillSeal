@@ -313,11 +313,6 @@ export const Profile: React.FC = () => {
                                  Connect with WalletConnect
                              </button>
 
-                              {/* AirKit Connect/Switch Button */}
-                             <button onClick={() => login()} className="btn btn-secondary" disabled={isLoading}>
-                                 Connect/Switch AirKit Wallet
-                             </button>
-
                              {/* Disconnect WalletConnect Button (only show if connected) */}
                              {isWcConnected && (
                                  <button onClick={() => wcDisconnect()} className="btn btn-danger" disabled={isLoading}> {/* Add btn-danger style */}
@@ -329,7 +324,6 @@ export const Profile: React.FC = () => {
 
                     {/* Security Settings */}
                     <div>
-                      {/* ... (Security section remains the same) ... */}
                        <h3 className="text-lg font-semibold mb-4 text-gray-700">Security</h3>
                        <div className="space-y-3">
                            <div className="flex justify-between items-center"><div><div className="font-medium text-gray-600">Biometric Authentication</div><div className="text-sm text-secondary">Use fingerprint or face recognition (managed via AirKit)</div></div><span className="text-sm text-gray-500 italic">Enabled via Login</span></div>

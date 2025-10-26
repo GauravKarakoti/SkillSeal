@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@craco/craco": "^7.1.0",
     "@mocanetwork/airkit": "^1.6.0",
     "@tanstack/react-query": "^5.90.5",
     "@testing-library/dom": "^10.4.1",
@@ -14,19 +15,21 @@
     "@types/react-dom": "^19.2.2",
     "@web3modal/wagmi": "^5.1.11",
     "axios": "^1.12.2",
+    "buffer": "^5.7.1",
     "dotenv": "^10.0.0",
     "ethers": "^5.8.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.4",
     "react-scripts": "5.0.1",
+    "stream-browserify": "^3.0.0",
     "wagmi": "^2.18.2",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
