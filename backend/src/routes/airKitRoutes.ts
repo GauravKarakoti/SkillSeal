@@ -5,11 +5,21 @@ import { CredentialModel } from '../models/Credential';
 import { ProofModel } from '../models/Proof';
 import { pool } from '../config/database';
 import dotenv from 'dotenv';
+
+// --- ADD REAL ZK-PROOF AND UTILITY IMPORTS ---
+import snarkjs from 'snarkjs';
+import fs from 'fs';
+import path from 'path';
+// --- END OF ADDITIONS ---
+
+// --- Import your real credential service ---
+import { credentialService } from '../services/credentialService';
+
 dotenv.config();
 
 // --- WARNING: DEVELOPMENT MOCK ---
-// The real `airAccount` and `airCredential` imports are removed due to package errors.
-// These mock objects bypass all Moca Network verification and are NOT SECURE.
+// The real `airAccount` import is removed due to package errors.
+// This mock object bypasses all Moca Network verification and is NOT SECURE.
 // TODO: Restore original imports once the correct Moca Admin SDK is installed.
 
 const airAccount = {
@@ -40,31 +50,23 @@ const airAccount = {
   })
 };
 
-const airCredential = {
-  issue: async (params: any) => ({
-    id: `mock-credential-${Date.now()}`,
-    ...params
-  }),
-  verifyZKProof: async (proof: any) => ({
-    valid: true,
-  }),
-  verify: async (credential: any) => ({
-    valid: true,
-  }),
-  generateZKProof: async (params: any) => ({
-    proofData: 'mock-proof-data-string',
-    publicInputs: params.publicInputs || { mock: 'public-inputs' }
-  })
-};
-// --- END OF DEVELOPMENT MOCK ---
-
-
 const router = Router();
+
+// --- Define paths to your compiled circuit products ---
+// Using your updated path
+const circuitsPath = path.join(__dirname, '../artifacts');
+const vkeyPath = path.join(circuitsPath, 'verification_key.json');
+let vkey: any = null; // Cache for verification key
+
+try {
+  vkey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
+  console.log('Verification key loaded successfully.');
+} catch (e) {
+  console.error('CRITICAL: Could not load verification_key.json. Verification will fail.', e);
+}
 
 /**
  * @route POST /api/airkit/login
- * @desc Login with AIR Account and create user session
- * @access Public
  */
 router.post('/login', validateRequest(userRegistrationSchema), async (req, res) => {
   try {
@@ -142,8 +144,6 @@ router.post('/login', validateRequest(userRegistrationSchema), async (req, res) 
 
 /**
  * @route POST /api/airkit/logout
- * @desc Logout user and invalidate session
- * @access Private
  */
 router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -168,8 +168,6 @@ router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res)
 
 /**
  * @route GET /api/airkit/profile
- * @desc Get user profile and AIR Account information
- * @access Private
  */
 router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -227,8 +225,6 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
 
 /**
  * @route POST /api/airkit/credential/issue
- * @desc Issue a new verifiable credential
- * @access Private
  */
 router.post('/credential/issue', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -246,8 +242,9 @@ router.post('/credential/issue', authenticateToken, async (req: AuthenticatedReq
       });
     }
 
+    // --- USE REAL SERVICE, NOT MOCK ---
     // Issue credential through AIR Credential service
-    const credential = await airCredential.issue({
+    const credential = await credentialService.issueCredential({
       type: credentialType,
       subject: user.walletAddress,
       issuer: process.env.ISSUER_DID!,
@@ -255,13 +252,14 @@ router.post('/credential/issue', authenticateToken, async (req: AuthenticatedReq
       expiration: expiration ? new Date(expiration) : undefined,
       privacyLevel: 'zk_proof_only'
     });
+    // --- END OF CHANGE ---
 
     // Store credential in database
     const client = await pool.connect();
     try {
       const credentialRecord = await CredentialModel.create({
         userId: user.id,
-        credentialId: credential.id,
+        credentialId: credential.id, // Assuming service returns an id
         credentialType,
         credentialData: {
           ...attributes,
@@ -309,16 +307,16 @@ router.post('/credential/issue', authenticateToken, async (req: AuthenticatedReq
 router.post('/credential/verify', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
     const { credential, proof } = req.body;
-
-    let verificationResult;
     
     if (proof) {
-      // Verify zero-knowledge proof
-      verificationResult = await airCredential.verifyZKProof(proof);
-    } else {
-      // Verify standard credential
-      verificationResult = await airCredential.verify(credential);
+      // ZKProof verification is handled by /zkp/verify
+      // This route is for *standard* credential verification.
+      return res.status(400).json({ success: false, error: "Use /api/airkit/zkp/verify to verify ZK proofs." });
     }
+    
+    // --- START: FIX for TypeScript Error ---
+    // Your service returns a boolean, so we store it as a boolean.
+    const verificationResult: boolean = await credentialService.verifyCredential(credential);
 
     // Additional database check for revocation
     const client = await pool.connect();
@@ -332,13 +330,15 @@ router.post('/credential/verify', authenticateToken, async (req: AuthenticatedRe
 
       res.json({
         success: true,
-        valid: verificationResult.valid && !isRevoked,
+        // `verificationResult` is now the boolean, so we use it directly
+        valid: verificationResult && !isRevoked,
         details: {
-          ...verificationResult,
+          // We can't spread a boolean, so we remove `...verificationResult`
           isRevoked,
           checkedAt: new Date().toISOString()
         }
       });
+      // --- END: FIX for TypeScript Error ---
     } finally {
       client.release();
     }
@@ -373,42 +373,72 @@ router.post('/zkp/generate', authenticateToken, async (req: AuthenticatedRequest
       });
     }
 
-    // Get user's credentials for proof generation
+    // --- START: REAL ZK-PROOF GENERATION ---
     const client = await pool.connect();
     try {
       const userCredentials = await CredentialModel.findByUserId(user.id);
       
-      // Prepare inputs for ZKP generation
-      const zkpInputs = {
-        ...privateInputs,
-        userCredentials: userCredentials.map(cred => ({
-          id: cred.credentialId,
-          type: cred.credentialType,
-          data: cred.credentialData,
-          issuedAt: cred.issuedAt
-        }))
-      };
+      let circuitInputs: any;
+      let circuitWasmPath: string;
+      let circuitZkeyPath: string;
 
-      // Generate zero-knowledge proof
-      const proof = await airCredential.generateZKProof({
-        circuit,
-        privateInputs: zkpInputs,
-        publicInputs: {
-          ...publicInputs,
-          subject: user.walletAddress,
-          circuitType: circuit,
-          generationTimestamp: Date.now()
-        }
-      });
+      // --- Logic for the reputation_scoring circuit ---
+      if (circuit === 'reputation_scoring_v2') {
+        // Your circuit 'reputation_scoring.circom' is 'v1', but frontend calls it 'v2'.
+        // We will prepare inputs for 'reputation_scoring.circom'.
+        
+        // ** FIX: Input Mismatch **
+        // Your frontend sends `minimumScore` as PRIVATE.
+        // Your circuit `reputation_scoring.circom` expects `minimumScore` as PUBLIC.
+        // This logic fixes that by preparing the inputs correctly for the circuit.
+        circuitInputs = prepareReputationInputs(userCredentials, privateInputs.minimumScore);
+
+        // --- Use your updated paths ---
+        circuitWasmPath = path.join(circuitsPath, 'reputation_scoring.wasm');
+        circuitZkeyPath = path.join(circuitsPath, 'reputation_scoring_0001.zkey');
+
+      } else {
+        // TODO: Add input preparation logic for your other circuits
+        return res.status(400).json({ success: false, error: `Circuit '${circuit}' is not yet implemented.` });
+      }
+
+      console.log("Generating proof with inputs:", circuitInputs);
+      console.log(`Using WASM: ${circuitWasmPath}`);
+      console.log(`Using ZKEY: ${circuitZkeyPath}`);
+      
+      if (!fs.existsSync(circuitWasmPath) || !fs.existsSync(circuitZkeyPath)) {
+        console.error('Missing circuit files. Did you compile?');
+        return res.status(500).json({ success: false, error: 'Internal server error: Missing circuit artifacts.'});
+      }
+
+      // Generate zero-knowledge proof using snarkjs
+      const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+          circuitInputs,
+          circuitWasmPath,
+          circuitZkeyPath
+      );
+
+      console.log("Proof generated successfully.");
+
+      // Combine frontend public inputs with circuit-generated public signals
+      const finalPublicInputs = {
+        ...publicInputs,
+        subject: user.walletAddress,
+        circuitType: circuit,
+        generationTimestamp: Date.now(),
+        signals: publicSignals // The public outputs from the circuit
+      };
 
       // Store proof in database
       const proofRecord = await ProofModel.create({
         userId: user.id,
         proofId: `proof_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         circuitType: circuit,
-        proofData: proof.proofData,
-        publicInputs: proof.publicInputs
+        proofData: JSON.stringify(proof), // Store proof object as a string
+        publicInputs: JSON.stringify(finalPublicInputs) // Store all public inputs
       });
+      // --- END: REAL ZK-PROOF GENERATION ---
+
 
       // Generate verification URL
       const verificationUrl = `${process.env.APP_URL}/verify/${proofRecord.proofId}`;
@@ -418,8 +448,8 @@ router.post('/zkp/generate', authenticateToken, async (req: AuthenticatedRequest
         proof: {
           proofId: proofRecord.proofId,
           circuit: proofRecord.circuitType,
-          proofData: proofRecord.proofData,
-          publicInputs: proofRecord.publicInputs,
+          proofData: proof, // Send the object
+          publicInputs: finalPublicInputs, // Send the combined object
           verificationUrl,
           generatedAt: proofRecord.createdAt
         }
@@ -439,16 +469,20 @@ router.post('/zkp/generate', authenticateToken, async (req: AuthenticatedRequest
 
 /**
  * @route POST /api/airkit/zkp/verify
- * @desc Verify a zero-knowledge proof
- * @access Public (can be called by anyone to verify proofs)
  */
 router.post('/zkp/verify', async (req, res) => {
   try {
     const { proofId, proofData, publicInputs } = req.body;
 
-    console.log('Verifying ZKP:', proofId);
+    console.log('Verifying ZKP:', proofId || 'from provided data');
+    
+    // --- START: REAL ZK-PROOF VERIFICATION ---
+    if (!vkey) {
+      return res.status(500).json({ success: false, error: 'Verification key not loaded.' });
+    }
 
-    let verificationResult;
+    let proofToVerify;
+    let publicInputsToVerify;
 
     if (proofId) {
       // Look up proof in database
@@ -463,26 +497,35 @@ router.post('/zkp/verify', async (req, res) => {
           });
         }
 
-        verificationResult = await airCredential.verifyZKProof({
-          proofData: proofRecord.proofData,
-          publicInputs: proofRecord.publicInputs
-        });
+        // Parse the JSON strings from the database
+        proofToVerify = JSON.parse(proofRecord.proofData);
+        publicInputsToVerify = JSON.parse(proofRecord.publicInputs);
+
       } finally {
         client.release();
       }
     } else {
       // Verify provided proof data directly
-      verificationResult = await airCredential.verifyZKProof({
-        proofData,
-        publicInputs
-      });
+      proofToVerify = proofData;
+      publicInputsToVerify = publicInputs;
     }
+
+    if (!proofToVerify || !publicInputsToVerify || !publicInputsToVerify.signals) {
+      return res.status(400).json({ success: false, error: 'Missing proof data or public inputs/signals' });
+    }
+
+    // The 'publicSignals' array is what snarkjs needs to verify
+    const isValid = await snarkjs.groth16.verify(
+        vkey,
+        publicInputsToVerify.signals,
+        proofToVerify
+    );
+    // --- END: REAL ZK-PROOF VERIFICATION ---
 
     res.json({
       success: true,
-      valid: verificationResult.valid,
+      valid: isValid,
       details: {
-        ...verificationResult,
         verifiedAt: new Date().toISOString()
       }
     });
@@ -498,8 +541,6 @@ router.post('/zkp/verify', async (req, res) => {
 
 /**
  * @route GET /api/airkit/credentials
- * @desc Get user's credentials
- * @access Private
  */
 router.get('/credentials', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -562,8 +603,6 @@ router.get('/credentials', authenticateToken, async (req: AuthenticatedRequest, 
 
 /**
  * @route DELETE /api/airkit/credential/:credentialId
- * @desc Revoke a credential
- * @access Private
  */
 router.delete('/credential/:credentialId', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -624,8 +663,6 @@ router.delete('/credential/:credentialId', authenticateToken, async (req: Authen
 
 /**
  * @route GET /api/airkit/proofs
- * @desc Get user's generated proofs
- * @access Private
  */
 router.get('/proofs', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -646,13 +683,22 @@ router.get('/proofs', authenticateToken, async (req: AuthenticatedRequest, res) 
       parseInt(offset as string) + parseInt(limit as string)
     );
 
-    const formattedProofs = paginatedProofs.map(proof => ({
-      id: proof.proofId,
-      circuit: proof.circuitType,
-      publicInputs: proof.publicInputs,
-      createdAt: proof.createdAt,
-      verificationUrl: `${process.env.APP_URL}/verify/${proof.proofId}`
-    }));
+    const formattedProofs = paginatedProofs.map(proof => {
+      // Safely parse public inputs
+      let publicInputs = {};
+      try {
+        // The data in the DB is stored as a string
+        publicInputs = JSON.parse(proof.publicInputs); 
+      } catch (e) { console.error("Could not parse public inputs for proof:", proof.proofId)}
+
+      return {
+        id: proof.proofId,
+        circuit: proof.circuitType,
+        publicInputs: publicInputs, // Send the parsed object
+        createdAt: proof.createdAt,
+        verificationUrl: `${process.env.APP_URL}/verify/${proof.proofId}`
+      }
+    });
 
     res.json({
       success: true,
@@ -674,8 +720,6 @@ router.get('/proofs', authenticateToken, async (req: AuthenticatedRequest, res) 
 
 /**
  * @route GET /api/airkit/cross-chain/:airId
- * @desc Get cross-chain identity information
- * @access Private
  */
 router.get('/cross-chain/:airId', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -704,8 +748,6 @@ router.get('/cross-chain/:airId', authenticateToken, async (req: AuthenticatedRe
 
 /**
  * @route POST /api/airkit/wallet/connect
- * @desc Connect additional wallet to AIR Account
- * @access Private
  */
 router.post('/wallet/connect', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -760,7 +802,56 @@ router.post('/wallet/connect', authenticateToken, async (req: AuthenticatedReque
   }
 });
 
-// Helper function to update user reputation
+// (Helper functions prepareReputationInputs and updateUserReputation are unchanged)
+function prepareReputationInputs(userCredentials: any[], minimumScore: number) {
+  const CIRCUIT_SIZE = 10;
+  
+  const credentials: bigint[] = [];
+  const weights: bigint[] = [];
+  
+  let weightedSum = 0n;
+  let totalWeight = 0n;
+
+  // Filter for relevant credentials (e.g., project_completion with a rating)
+  const projectCreds = userCredentials
+    .filter(c => c.credentialType === 'project_completion' && c.credentialData?.rating)
+    .slice(0, CIRCUIT_SIZE); // Take the first 10
+
+  for (let i = 0; i < CIRCUIT_SIZE; i++) {
+    if (i < projectCreds.length) {
+      // Your circuit seems to use simple scores. Let's use the rating (e.g., 1-5)
+      // and scale it (e.g., 1-100). Assuming rating is 1-5, multiply by 20.
+      const score = BigInt(projectCreds[i].credentialData.rating * 20 || 0);
+      const weight = 1n; // Using a simple weight of 1 for each
+
+      credentials.push(score);
+      weights.push(weight);
+
+      weightedSum += score * weight;
+      totalWeight += weight;
+    } else {
+      // Pad with zeros if user has fewer than 10 credentials
+      credentials.push(0n);
+      weights.push(0n);
+    }
+  }
+
+  // Calculate averageScore. Handle division by zero.
+  // This is the "division computed outside" part from your circuit's comments.
+  const averageScore = totalWeight > 0n ? weightedSum / totalWeight : 0n;
+
+  return {
+    // --- Public Inputs ---
+    // This is the fix: minimumScore is public, as per your .circom file
+    minimumScore: BigInt(minimumScore || 0), 
+
+    // --- Private Inputs ---
+    credentials,
+    weights,
+    averageScore
+  };
+}
+
 async function updateUserReputation(userId: number): Promise<void> {
   const client = await pool.connect();
   try {

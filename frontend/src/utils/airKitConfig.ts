@@ -1,6 +1,10 @@
 // FIX: Import the module as a namespace, and the other values separately.
-import * as AirKit from '@mocanetwork/airkit';
-import { BUILD_ENV, type AirSessionConfig } from '@mocanetwork/airkit';
+// import * as AirKit from '@mocanetwork/airkit'; // <- REMOVE THIS LINE
+import {
+  BUILD_ENV,
+  type AirSessionConfig,
+  AirService, // <- ADD THIS
+} from '@mocanetwork/airkit';
 
 // 1. Get Partner ID from environment variables
 // This comes from '.env.example'
@@ -10,9 +14,10 @@ if (!partnerId) {
 }
 
 // 2. Determine the build environment
-const buildEnv = process.env.REACT_APP_NODE_ENV === 'production' 
-  ? BUILD_ENV.PRODUCTION 
-  : BUILD_ENV.SANDBOX; // Use SANDBOX for development
+const buildEnv =
+  process.env.REACT_APP_NODE_ENV === 'production'
+    ? BUILD_ENV.PRODUCTION
+    : BUILD_ENV.SANDBOX; // Use SANDBOX for development
 
 // 3. Configure the session
 const sessionConfig: Partial<AirSessionConfig> = {
@@ -22,7 +27,8 @@ const sessionConfig: Partial<AirSessionConfig> = {
 // 4. Create the single AirService instance
 // FIX: Access the 'default' property from the namespace import and cast to 'any'
 // This bypasses the faulty type definition and allows 'new' to be called.
-const airService = new (AirKit as any).default({
+// const airService = new (AirKit as any).default({ // <- REMOVE THIS LINE
+const airService = new AirService({ // <- REPLACE WITH THIS LINE
   partnerId: partnerId,
 });
 
@@ -34,11 +40,11 @@ export const initializeAirKit = async () => {
       buildEnv: buildEnv,
       enableLogging: process.env.REACT_APP_NODE_ENV !== 'production',
       skipRehydration: false,
-      sessionConfig: sessionConfig
+      sessionConfig: sessionConfig,
     });
-    console.log("AirService initialized successfully.");
+    console.log('AirService initialized successfully.');
   } catch (error) {
-    console.error("Failed to initialize AirService:", error);
+    console.error('Failed to initialize AirService:', error);
   }
   return airService;
 };
