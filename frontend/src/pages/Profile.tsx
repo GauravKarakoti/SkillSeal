@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Import 'airService' from the hook
+// Add 'login' from the hook
 import { useAirKit } from '../hooks/useAirKit';
 
 interface ProfileData {
@@ -12,11 +13,15 @@ interface ProfileData {
 
 export const Profile: React.FC = () => {
   // FIX: Destructure 'airService' from the hook
-  const { userProfile, airService } = useAirKit();
+  // Add 'login'
+  const { userProfile, airService, login } = useAirKit();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedEmail, setEditedEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true); // Add loading state
+  
+  // Get the currently active wallet address from AirKit
+  const activeWalletAddress = (userProfile as any)?.address;
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -45,6 +50,7 @@ export const Profile: React.FC = () => {
         // Assuming the API returns profile data matching ProfileData interface
         setProfileData({
            airId: data.profile.airId || 'N/A',
+           // This is the PRIMARY wallet address from our DB
            walletAddress: data.profile.walletAddress || 'N/A',
            email: data.profile.email || '',
            joinedDate: data.createdAt || new Date().toISOString(), // Get joinedDate from API or default
@@ -88,6 +94,43 @@ export const Profile: React.FC = () => {
     }
   };
 
+  // NEW: Handler to set the active wallet as the primary one
+  const handleSetPrimary = async () => {
+    if (!activeWalletAddress || activeWalletAddress === profileData?.walletAddress) return;
+    
+    setIsLoading(true); // Show loading state
+    try {
+      const { token } = await airService.getAccessToken();
+      // NEW: Call the new endpoint to update the primary wallet
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/profile/set-primary`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        // Send the currently active wallet address
+        body: JSON.stringify({ walletAddress: activeWalletAddress })
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        // Update the local profile data to reflect the new primary wallet
+        setProfileData(prev => prev ? { ...prev, walletAddress: updatedUser.walletAddress } : null);
+        alert('Primary wallet updated successfully!');
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to set primary wallet via API:', errorText);
+        alert(`Failed to set primary wallet: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Error setting primary wallet:', error);
+      alert('An error occurred while setting the primary wallet.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   if (isLoading) {
     return <div className="loading p-6">Loading profile...</div>;
   }
@@ -95,6 +138,10 @@ export const Profile: React.FC = () => {
   if (!profileData) {
     return <div className="p-6">Could not load profile data. Please ensure you are logged in.</div>;
   }
+
+  const primaryWalletAddress = profileData.walletAddress;
+  const isDifferentWalletActive = activeWalletAddress && activeWalletAddress.toLowerCase() !== primaryWalletAddress.toLowerCase();
+
 
   return (
     <div className="profile-page p-6">
@@ -116,10 +163,10 @@ export const Profile: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="form-label">Wallet Address</label>
+                <label className="form-label">Primary Wallet Address</label>
                 <input
                   type="text"
-                  value={profileData.walletAddress}
+                  value={primaryWalletAddress}
                   className="form-input bg-gray-100 cursor-not-allowed" // Style disabled input
                   disabled
                 />
@@ -198,17 +245,37 @@ export const Profile: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-700">Connected Wallets</h3>
             <div className="space-y-2">
+              {/* Primary Wallet (from DB) */}
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
                 <div>
                   <div className="font-medium text-gray-600">Primary Wallet</div>
                   <div className="text-sm text-secondary break-all"> {/* Added break-all */}
-                    {profileData.walletAddress}
+                    {primaryWalletAddress}
                   </div>
                 </div>
-                <span className="badge badge-success flex-shrink-0">Connected</span> {/* Added flex-shrink-0 */}
+                <span className="badge badge-success flex-shrink-0">Primary</span> {/* Added flex-shrink-0 */}
               </div>
+
+              {/* Active Wallet (if different) */}
+              {isDifferentWalletActive && (
+                <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded">
+                  <div>
+                    <div className="font-medium text-blue-700">Active Wallet</div>
+                    <div className="text-sm text-secondary break-all">
+                      {activeWalletAddress}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSetPrimary}
+                    className="btn btn-secondary" // Assumes you have a 'btn-secondary' style
+                  >
+                    Set as Primary
+                  </button>
+                </div>
+              )}
             </div>
-            <button className="btn btn-primary mt-4">
+            {/* FIX: Use login function to connect/switch wallet */}
+            <button onClick={login} className="btn btn-primary mt-4">
               Connect Additional Wallet
             </button>
           </div>

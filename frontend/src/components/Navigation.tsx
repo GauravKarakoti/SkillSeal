@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // FIX: Import 'airService' from the hook
+// Add 'login' to the import
 import { useAirKit } from '../hooks/useAirKit';
 
 export const Navigation: React.FC = () => {
   // FIX: Destructure 'airService' from the hook
-  const { userProfile, logout, airService } = useAirKit();
+  // Add 'login' from the hook
+  const { userProfile, logout, airService, login } = useAirKit();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userStats, setUserStats] = useState({
@@ -18,7 +20,7 @@ export const Navigation: React.FC = () => {
     if (userProfile) {
       fetchUserStats();
     }
-  }, [userProfile]);
+  }, [userProfile, airService]); // Add airService dependency
 
   const fetchUserStats = async () => {
     try {
@@ -43,6 +45,17 @@ export const Navigation: React.FC = () => {
       console.error('Logout failed:', error);
     }
   };
+  
+  // NEW: Handler for connecting a new wallet
+  const handleConnectWallet = async () => {
+    setIsMobileMenuOpen(false);
+    try {
+      await login(); // Re-use the login function to connect/switch wallet
+    } catch (error) {
+      console.error('Failed to connect new wallet:', error);
+    }
+  };
+
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -65,11 +78,13 @@ export const Navigation: React.FC = () => {
   ];
 
   return (
-    <nav className="navbar">
+    // FIX: Added bg-white and border-b for better layout definition
+    <nav className="navbar w-full bg-white border-b border-gray-200">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
           {/* Logo and Brand */}
-          <div className="flex items-center space-x-4">
+          {/* FIX: Added min-w-0 to allow this flex item to shrink */}
+          <div className="flex items-center space-x-4 min-w-0">
             <Link to="/" className="nav-brand flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
                 S
@@ -78,7 +93,8 @@ export const Navigation: React.FC = () => {
             </Link>
             
             {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-1">
+            {/* FIX: Added flex-shrink and min-w-0 to allow nav links to shrink */}
+            <div className="hidden md:flex space-x-1 flex-shrink min-w-0">
               {navItems.map(item => (
                 <Link
                   key={item.path}
@@ -90,14 +106,15 @@ export const Navigation: React.FC = () => {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="whitespace-nowrap">{item.label}</span>
                 </Link>
               ))}
             </div>
           </div>
 
           {/* User Info and Controls */}
-          <div className="flex items-center space-x-4">
+          {/* FIX: Added flex-shrink-0 to prevent this section from shrinking */}
+          <div className="flex items-center space-x-4 flex-shrink-0">
             {/* User Stats (Desktop) */}
             <div className="hidden lg:flex items-center space-x-4">
               <div className="text-right">
@@ -199,11 +216,9 @@ export const Navigation: React.FC = () => {
                       <span>📜</span>
                       <span>Manage Credentials</span>
                     </Link>
+                    {/* FIX: Implement Connect Another Wallet */}
                     <button
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        // Add connect wallet functionality
-                      }}
+                      onClick={handleConnectWallet}
                       className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
                     >
                       <span>🔗</span>
@@ -213,10 +228,16 @@ export const Navigation: React.FC = () => {
 
                   {/* Support & Logout */}
                   <div className="py-2 border-t border-gray-100">
-                    <button className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left">
+                    {/* FIX: Implement Help & Support as a mailto link */}
+                    <a
+                      href="mailto:karakotigaurav12@gmail.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+                    >
                       <span>❓</span>
                       <span>Help & Support</span>
-                    </button>
+                    </a>
                     <button
                       onClick={handleLogout}
                       className="flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"

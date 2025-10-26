@@ -182,11 +182,18 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
         [user.id]
       );
 
-      const email = await client.query(
-        'SELECT email FROM users WHERE id = $1',
+      // FIX: Fetch the user record from the 'users' table to get all details
+      const userResult = await client.query(
+        'SELECT * FROM users WHERE id = $1',
         [user.id]
       );
-      console.log('Fetched email:', email.rows[0]?.email);
+      
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      
+      const dbUser = userResult.rows[0];
+      console.log('Fetched email:', dbUser.email);
 
       const proofsCount = await client.query(
         'SELECT COUNT(*) FROM zk_proofs WHERE user_id = $1',
@@ -201,8 +208,13 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
       res.json({
         success: true,
         profile: {
-          ...user,
-          email: email.rows[0]?.email,
+          // Send all details from the user table
+          id: dbUser.id,
+          airId: dbUser.air_id,
+          walletAddress: dbUser.wallet_address, // This is the primary wallet
+          email: dbUser.email,
+          createdAt: dbUser.created_at,
+          // ...user, // Original user object from token might be stale
           airProfile: {
             universalId: airProfile.universalId,
             connectedChains: airProfile.connectedChains,
@@ -228,6 +240,10 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
   }
 });
 
+/**
+ * @route PUT /api/airkit/profile
+ * @desc Updates the user's email
+ */
 router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
     const user = (req as any).user;
@@ -278,6 +294,64 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
     });
   }
 });
+
+/**
+ * **NEW ENDPOINT**
+ * @route PUT /api/airkit/profile/set-primary
+ * @desc Sets the user's primary wallet address
+ * @access Private
+ */
+router.put('/profile/set-primary', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = (req as any).user; // Get user from auth middleware
+    const { walletAddress } = req.body;
+
+    // 1. Validate input
+    if (!walletAddress || typeof walletAddress !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'walletAddress is required and must be a string'
+      });
+    }
+
+    // 2. Update the user's primary wallet in the database
+    const client = await pool.connect();
+    try {
+      const updateResult = await client.query(
+        `UPDATE users 
+         SET wallet_address = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 
+         RETURNING id, air_id, wallet_address, email, updated_at`,
+        [walletAddress, user.id]
+      );
+
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // 3. Send back the updated user information
+      res.json({
+        success: true,
+        message: 'Primary wallet updated successfully',
+        user: updateResult.rows[0]
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error('Primary wallet update error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update primary wallet',
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
+  }
+});
+
 
 /**
  * @route POST /api/airkit/credential/issue
@@ -564,7 +638,7 @@ router.post('/zkp/verify', async (req, res) => {
       // Verify provided proof data directly
       proofToVerify = proofData;
       publicInputsToVerify = publicInputs;
-    }
+  }
 
     if (!proofToVerify || !publicInputsToVerify || !publicInputsToVerify.signals) {
       return res.status(400).json({ success: false, error: 'Missing proof data or public inputs/signals' });
@@ -684,7 +758,7 @@ router.delete('/credential/:credentialId', authenticateToken, async (req: Authen
         return res.status(400).json({
           success: false,
           error: 'Not authorized to revoke this credential'
-        });
+       });
       }
 
       // Revoke credential in database
