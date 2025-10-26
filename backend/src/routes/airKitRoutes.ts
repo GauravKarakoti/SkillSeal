@@ -437,14 +437,14 @@ router.post('/zkp/generate', authenticateToken, async (req: AuthenticatedRequest
       });
       // --- END: REAL ZK-PROOF GENERATION ---
 
-
+      console.log("Proof record stored with ID:", proofRecord);
       // Generate verification URL
-      const verificationUrl = `${process.env.APP_URL}/verify/${proofRecord.proofId}`;
+      const verificationUrl = `${process.env.APP_URL}/verify/${proofRecord.proof_id}`;
 
       res.json({
         success: true,
         proof: {
-          proofId: proofRecord.proofId,
+          proofId: proofRecord.proof_id,
           circuit: proofRecord.circuitType,
           proofData: proof, // Send the object
           publicInputs: finalPublicInputs, // Send the combined object
@@ -687,14 +687,15 @@ router.get('/proofs', authenticateToken, async (req: AuthenticatedRequest, res) 
       try {
         // The data in the DB is stored as a string
         publicInputs = JSON.parse(proof.publicInputs); 
-      } catch (e) { console.error("Could not parse public inputs for proof:", proof.proofId)}
+      } catch (e) { console.error("Could not parse public inputs for proof:", proof.proof_id)}
+      console.log("Parsed public inputs for proof:", proof, publicInputs);
 
       return {
-        id: proof.proofId,
+        id: proof.proof_id,
         circuit: proof.circuitType,
         publicInputs: publicInputs, // Send the parsed object
         createdAt: proof.createdAt,
-        verificationUrl: `${process.env.APP_URL}/verify/${proof.proofId}`
+        verificationUrl: `${process.env.APP_URL}/verify/${proof.proof_id}`
       }
     });
 

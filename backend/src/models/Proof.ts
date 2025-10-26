@@ -3,7 +3,7 @@ import { pool } from '../config/database';
 export interface ZKProof {
   id: number;
   userId: number;
-  proofId: string;
+  proof_id: string;
   circuitType: string;
   proofData: any;
   publicInputs: any;

@@ -34,6 +34,7 @@ export const Profile: React.FC = () => {
             'Authorization': `Bearer ${token}`
           }
         });
+        console.log('API response status:', response.status);
 
         if (!response.ok) {
            throw new Error(`API Error: ${response.statusText}`);
@@ -48,6 +49,7 @@ export const Profile: React.FC = () => {
            joinedDate: data.createdAt || new Date().toISOString(), // Get joinedDate from API or default
            reputationTier: data.tier || 'BASIC' // Get tier from API or default
         });
+        console.log('Fetched profile data:', data);
         setEditedEmail(data.email || '');
       } catch (error) {
         console.error('Failed to fetch profile:', error);

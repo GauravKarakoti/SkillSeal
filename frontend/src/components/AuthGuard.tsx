@@ -9,7 +9,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { isInitialized, userProfile, login } = useAirKit();
 
   if (!isInitialized) {
-    return <div>Initializing AIR Kit...</div>;
+    return <div className="flex items-center justify-center h-full w-full">Initializing AIR Kit...</div>;
   }
 
   if (!userProfile) {

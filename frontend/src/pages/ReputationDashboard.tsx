@@ -32,6 +32,7 @@ export const ReputationDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'credentials' | 'analysis'>('overview');
   const [isGeneratingProof, setIsGeneratingProof] = useState(false); // Add state for proof generation
+  const [generatedProof, setGeneratedProof] = useState<any | null>(null); // Add state to store the proof
 
   const reputationTiers: ReputationTier[] = [
     {
@@ -154,6 +155,7 @@ export const ReputationDashboard: React.FC = () => {
     if (!userProfile || !currentTier) return; // Need current tier for minScore
     
     setIsGeneratingProof(true); // Indicate loading
+    setGeneratedProof(null); // Clear previous proof
     try {
       // FIX: Get token from airService
       const { token } = await airService.getAccessToken();
@@ -185,8 +187,8 @@ export const ReputationDashboard: React.FC = () => {
 
       if (result.success) {
         console.log('Reputation proof generated via API:', result.proof);
-        alert('Reputation proof generated successfully! Check console for details.');
-        // Optionally store or display the proof details (result.proof)
+        setGeneratedProof(result.proof); // Store the generated proof
+        alert('Reputation proof generated successfully!');
       } else {
         throw new Error(result.error || 'Backend failed to generate proof');
       }
@@ -201,6 +203,18 @@ export const ReputationDashboard: React.FC = () => {
     } finally {
       setIsGeneratingProof(false); // Stop loading
     }
+  };
+
+  const downloadProof = () => {
+    if (!generatedProof) return;
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(generatedProof, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "reputation-proof.json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
 
 
@@ -397,6 +411,25 @@ export const ReputationDashboard: React.FC = () => {
                       View Public Profile (Coming Soon)
                     </button>
                   </div>
+
+                  {/* START: Generated Proof Section */}
+                  {generatedProof && (
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <h5 className="font-semibold text-gray-800 mb-2">
+                        Generated Reputation Proof
+                      </h5>
+                      <pre className="text-xs text-gray-600 bg-white p-3 rounded overflow-auto max-h-60">
+                        {JSON.stringify(generatedProof, null, 2)}
+                      </pre>
+                      <button 
+                        onClick={downloadProof}
+                        className="w-full btn btn-secondary mt-4"
+                      >
+                        Download Proof (.json)
+                      </button>
+                    </div>
+                  )}
+                  {/* END: Generated Proof Section */}
                   
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <h5 className="font-semibold text-blue-800 mb-2">

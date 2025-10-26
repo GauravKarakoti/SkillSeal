@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 // FIX: Import 'airService' from the hook
 import { useAirKit } from '../hooks/useAirKit';
-import { CredentialManager } from '../components/CredentialManager';
-import { ZKPGenerator } from '../components/ZKPGenerator';
 
 export const Dashboard: React.FC = () => {
   // FIX: Destructure 'airService' from the hook
   const { userProfile, airService } = useAirKit();
-  const [activeTab, setActiveTab] = useState<'overview' | 'credentials' | 'zkp'>('overview');
+  const navigate = useNavigate(); // Initialize useNavigate 
   const [userStats, setUserStats] = useState({
     credentialCount: 0,
     proofCount: 0,
@@ -84,80 +83,42 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs - MODIFIED */}
       <div className="card">
-        <div className="flex border-b border-gray-200 mb-6">
-          <button
-            className={`px-4 py-2 font-medium ${
-              activeTab === 'overview'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-secondary hover:text-primary'
-            }`}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button
-            className={`px-4 py-2 font-medium ${
-              activeTab === 'credentials'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-secondary hover:text-primary'
-            }`}
-            onClick={() => setActiveTab('credentials')}
-          >
-            Credentials
-          </button>
-          <button
-            className={`px-4 py-2 font-medium ${
-              activeTab === 'zkp'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-secondary hover:text-primary'
-            }`}
-            onClick={() => setActiveTab('zkp')}
-          >
-            Zero-Knowledge Proofs
-          </button>
-        </div>
-
-        {/* Tab Content */}
+        {/* Tab Content - MODIFIED */}
         <div className="tab-content">
-          {activeTab === 'overview' && (
-            <div className="overview-tab">
-              <h2 className="card-header">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button 
-                  className="btn btn-primary w-full"
-                  onClick={() => setActiveTab('credentials')}
-                >
-                  Manage Credentials
-                </button>
-                <button 
-                  className="btn btn-secondary w-full"
-                  onClick={() => setActiveTab('zkp')}
-                >
-                  Generate ZKP
-                </button>
-              </div>
+          <div className="overview-tab">
+            <h2 className="card-header">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button 
+                className="btn btn-primary w-full"
+                onClick={() => navigate('/credentials')} // MODIFIED: Navigate to route
+              >
+                Manage Credentials
+              </button>
+              <button 
+                className="btn btn-secondary w-full"
+                onClick={() => navigate('/zkp')} // MODIFIED: Navigate to route
+              >
+                Generate ZKP
+              </button>
+            </div>
 
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-4 text-gray-800">Recent Activity</h3>
-                <div className="space-y-3">
-                  {/* Static example data */}
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded text-gray-700">
-                    <span>Project completion credential issued</span>
-                    <span className="text-sm text-secondary">2 hours ago</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded text-gray-700">
-                    <span>Reputation proof generated</span>
-                    <span className="text-sm text-secondary">1 day ago</span>
-                  </div>
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Recent Activity</h3>
+              <div className="space-y-3">
+                {/* Static example data */}
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded text-gray-700">
+                  <span>Project completion credential issued</span>
+                  <span className="text-sm text-secondary">2 hours ago</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded text-gray-700">
+                  <span>Reputation proof generated</span>
+                  <span className="text-sm text-secondary">1 day ago</span>
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTab === 'credentials' && <CredentialManager />}
-          {activeTab === 'zkp' && <ZKPGenerator />}
+          </div>
         </div>
       </div>
     </div>
