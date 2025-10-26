@@ -1,13 +1,10 @@
-// FIX: Import the module as a namespace, and the other values separately.
-// import * as AirKit from '@mocanetwork/airkit'; // <- REMOVE THIS LINE
 import {
   BUILD_ENV,
   type AirSessionConfig,
-  AirService, // <- ADD THIS
+  AirService,
 } from '@mocanetwork/airkit';
 
 // 1. Get Partner ID from environment variables
-// This comes from '.env.example'
 const partnerId = process.env.REACT_APP_AIR_KIT_API_KEY!;
 if (!partnerId) {
   console.error('REACT_APP_AIR_KIT_API_KEY is not set in your .env file.');
@@ -25,10 +22,7 @@ const sessionConfig: Partial<AirSessionConfig> = {
 };
 
 // 4. Create the single AirService instance
-// FIX: Access the 'default' property from the namespace import and cast to 'any'
-// This bypasses the faulty type definition and allows 'new' to be called.
-// const airService = new (AirKit as any).default({ // <- REMOVE THIS LINE
-const airService = new AirService({ // <- REPLACE WITH THIS LINE
+const airService = new AirService({
   partnerId: partnerId,
 });
 

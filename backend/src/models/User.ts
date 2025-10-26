@@ -21,7 +21,15 @@ export class UserModel {
       'SELECT * FROM users WHERE air_id = $1',
       [airId]
     );
-    return result.rows[0] || null;
+    // pg-node returns snake_case, let's map to camelCase
+    if (!result.rows[0]) return null;
+    return {
+      ...result.rows[0],
+      airId: result.rows[0].air_id,
+      walletAddress: result.rows[0].wallet_address,
+      createdAt: result.rows[0].created_at,
+      updatedAt: result.rows[0].updated_at,
+    };
   }
 
   static async findByWalletAddress(walletAddress: string): Promise<User | null> {
@@ -29,7 +37,15 @@ export class UserModel {
       'SELECT * FROM users WHERE wallet_address = $1',
       [walletAddress]
     );
-    return result.rows[0] || null;
+    // pg-node returns snake_case, let's map to camelCase
+    if (!result.rows[0]) return null;
+    return {
+      ...result.rows[0],
+      airId: result.rows[0].air_id,
+      walletAddress: result.rows[0].wallet_address,
+      createdAt: result.rows[0].created_at,
+      updatedAt: result.rows[0].updated_at,
+    };
   }
 
   static async create(userData: CreateUserData): Promise<User> {
@@ -39,15 +55,45 @@ export class UserModel {
        RETURNING *`,
       [userData.airId, userData.walletAddress, userData.email]
     );
-    return result.rows[0];
+    // Map response to camelCase
+    return {
+      ...result.rows[0],
+      airId: result.rows[0].air_id,
+      walletAddress: result.rows[0].wallet_address,
+      createdAt: result.rows[0].created_at,
+      updatedAt: result.rows[0].updated_at,
+    };
   }
 
+  // --- UPDATED FUNCTION ---
+  // This function now maps camelCase keys from the 'updates' object
+  // to the correct snake_case column names in the database.
   static async update(userId: number, updates: Partial<CreateUserData>): Promise<User> {
-    const setClause = Object.keys(updates)
-      .map((key, index) => `${key} = $${index + 2}`)
+    // Map JS keys to DB column names
+    const columnMap: { [key in keyof CreateUserData]?: string } = {
+      airId: 'air_id',
+      walletAddress: 'wallet_address',
+      email: 'email',
+    };
+
+    // Filter out any keys that aren't in the map
+    const updateKeys = Object.keys(updates).filter(key => 
+      columnMap[key as keyof CreateUserData]
+    ) as (keyof CreateUserData)[];
+
+    if (updateKeys.length === 0) {
+      throw new Error("No valid fields provided for update.");
+    }
+
+    const setClause = updateKeys
+      .map((key, index) => 
+        // Use the mapped column name
+        `${columnMap[key]} = $${index + 2}`
+      )
       .join(', ');
 
-    const values = [userId, ...Object.values(updates)];
+    // Get values in the correct order
+    const values = [userId, ...updateKeys.map(key => updates[key])];
 
     const result = await pool.query(
       `UPDATE users 
@@ -56,7 +102,15 @@ export class UserModel {
        RETURNING *`,
       values
     );
-    return result.rows[0];
+
+    // Map response to camelCase
+    return {
+      ...result.rows[0],
+      airId: result.rows[0].air_id,
+      walletAddress: result.rows[0].wallet_address,
+      createdAt: result.rows[0].created_at,
+      updatedAt: result.rows[0].updated_at,
+    };
   }
 
   static async getUserWithCredentials(userId: number): Promise<any> {
@@ -69,6 +123,18 @@ export class UserModel {
        GROUP BY u.id`,
       [userId]
     );
-    return result.rows[0];
+    
+    if (!result.rows[0]) return null;
+
+    // Map user fields to camelCase
+    const user = result.rows[0];
+    return {
+      ...user,
+      airId: user.air_id,
+      walletAddress: user.wallet_address,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+      // You may also need to map fields within the 'credentials' array if they are snake_case
+    };
   }
 }
