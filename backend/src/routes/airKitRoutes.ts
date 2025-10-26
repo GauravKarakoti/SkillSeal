@@ -182,6 +182,12 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
         [user.id]
       );
 
+      const email = await client.query(
+        'SELECT email FROM users WHERE id = $1',
+        [user.id]
+      );
+      console.log('Fetched email:', email.rows[0]?.email);
+
       const proofsCount = await client.query(
         'SELECT COUNT(*) FROM zk_proofs WHERE user_id = $1',
         [user.id]
@@ -196,6 +202,7 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
         success: true,
         profile: {
           ...user,
+          email: email.rows[0]?.email,
           airProfile: {
             universalId: airProfile.universalId,
             connectedChains: airProfile.connectedChains,
@@ -217,6 +224,57 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res)
     res.status(500).json({
       success: false,
       error: 'Failed to fetch profile'
+    });
+  }
+});
+
+router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = (req as any).user;
+    const { email } = req.body; // Get the new email from the request body
+
+    // 1. Validate the new email (optional, but recommended)
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+
+    // 2. Update the user's email in the database
+    const client = await pool.connect();
+    try {
+      const updateResult = await client.query(
+        `UPDATE users 
+         SET email = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 
+         RETURNING id, air_id, wallet_address, email, updated_at`,
+        [email, user.id]
+      );
+
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // 3. Send back the updated user information
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        user: updateResult.rows[0]
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update profile',
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message
     });
   }
 });

@@ -46,6 +46,7 @@ export const Profile: React.FC = () => {
         setProfileData({
            airId: data.profile.airId || 'N/A',
            walletAddress: data.profile.walletAddress || 'N/A',
+           email: data.profile.email || '',
            joinedDate: data.createdAt || new Date().toISOString(), // Get joinedDate from API or default
            reputationTier: data.profile.airProfile.identityTier || 'Tier 1' // Get tier from API or default
         });
