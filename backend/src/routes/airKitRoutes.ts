@@ -5,9 +5,7 @@ import { CredentialModel } from '../models/Credential';
 import { ProofModel } from '../models/Proof';
 import { pool } from '../config/database';
 import dotenv from 'dotenv';
-
-// --- ADD REAL ZK-PROOF AND UTILITY IMPORTS ---
-import snarkjs from 'snarkjs';
+import * as snarkjs from 'snarkjs';
 import fs from 'fs';
 import path from 'path';
 // --- END OF ADDITIONS ---

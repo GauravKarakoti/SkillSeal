@@ -10,7 +10,7 @@ export const databaseConfig = {
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
   ssl: {
     rejectUnauthorized: false
   }
@@ -64,3 +64,7 @@ export const initializeDatabase = async () => {
     client.release();
   }
 };
+
+initializeDatabase().catch(err => {
+  console.error('Failed to initialize database:', err);
+});
