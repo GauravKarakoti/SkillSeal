@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { runMigrations } from '../scripts/migrate';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -67,4 +68,8 @@ export const initializeDatabase = async () => {
 
 initializeDatabase().catch(err => {
   console.error('Failed to initialize database:', err);
+});
+
+runMigrations().catch(err => {
+  console.error('Failed to run migrations:', err);
 });

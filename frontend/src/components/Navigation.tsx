@@ -24,7 +24,7 @@ export const Navigation: React.FC = () => {
     try {
       // FIX: Get token from 'airService', not 'userProfile'
       const { token } = await airService.getAccessToken();
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/stats`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const stats = await response.json();

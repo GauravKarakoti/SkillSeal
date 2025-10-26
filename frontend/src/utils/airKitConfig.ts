@@ -9,7 +9,6 @@ import {
 // 1. Get Partner ID from environment variables
 // This comes from '.env.example'
 const partnerId = process.env.REACT_APP_AIR_KIT_API_KEY!;
-console.log('AirKit Partner ID:', process.env.REACT_APP_AIR_KIT_API_KEY);
 if (!partnerId) {
   console.error('REACT_APP_AIR_KIT_API_KEY is not set in your .env file.');
 }

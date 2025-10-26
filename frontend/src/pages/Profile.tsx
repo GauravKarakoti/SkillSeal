@@ -29,7 +29,7 @@ export const Profile: React.FC = () => {
       try {
         // FIX: Get token from 'airService'
         const { token } = await airService.getAccessToken();
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, { // Assuming this endpoint exists
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/profile`, { // Assuming this endpoint exists
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -41,15 +41,14 @@ export const Profile: React.FC = () => {
         }
 
         const data = await response.json();
+        console.log('Profile data from API:', data);
         // Assuming the API returns profile data matching ProfileData interface
         setProfileData({
-           airId: (userProfile as any)?.airId || 'N/A', // Get airId from userProfile
-           walletAddress: (userProfile as any)?.address || 'N/A', // Get address from userProfile
-           email: data.email, // Get email from API
+           airId: data.profile.airId || 'N/A',
+           walletAddress: data.profile.walletAddress || 'N/A',
            joinedDate: data.createdAt || new Date().toISOString(), // Get joinedDate from API or default
-           reputationTier: data.tier || 'BASIC' // Get tier from API or default
+           reputationTier: data.profile.airProfile.identityTier || 'Tier 1' // Get tier from API or default
         });
-        console.log('Fetched profile data:', data);
         setEditedEmail(data.email || '');
       } catch (error) {
         console.error('Failed to fetch profile:', error);
@@ -68,7 +67,7 @@ export const Profile: React.FC = () => {
     try {
       // FIX: Get token from 'airService'
       const { token } = await airService.getAccessToken();
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, { // Assuming this endpoint exists
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/airkit/profile`, { // Assuming this endpoint exists
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -104,7 +103,7 @@ export const Profile: React.FC = () => {
         <div className="space-y-6">
           {/* Basic Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="form-label">AIR ID</label>
@@ -171,7 +170,7 @@ export const Profile: React.FC = () => {
 
           {/* Account Status */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Account Status</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">Account Status</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-sm text-blue-600 mb-1">Reputation Tier</div>
@@ -196,11 +195,11 @@ export const Profile: React.FC = () => {
 
           {/* Connected Wallets */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Connected Wallets</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">Connected Wallets</h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
                 <div>
-                  <div className="font-medium">Primary Wallet</div>
+                  <div className="font-medium text-gray-600">Primary Wallet</div>
                   <div className="text-sm text-secondary break-all"> {/* Added break-all */}
                     {profileData.walletAddress}
                   </div>
@@ -215,11 +214,11 @@ export const Profile: React.FC = () => {
 
           {/* Security Settings - Static Example */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Security</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">Security</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-medium">Biometric Authentication</div>
+                  <div className="font-medium text-gray-600">Biometric Authentication</div>
                   <div className="text-sm text-secondary">
                     Use fingerprint or face recognition (managed via AirKit)
                   </div>
@@ -230,7 +229,7 @@ export const Profile: React.FC = () => {
               
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-medium">Two-Factor Authentication</div>
+                  <div className="font-medium text-gray-600">Two-Factor Authentication</div>
                   <div className="text-sm text-secondary">
                     Add an extra layer of security (managed via AirKit)
                   </div>
