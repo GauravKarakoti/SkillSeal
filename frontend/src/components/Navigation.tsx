@@ -7,7 +7,7 @@ import { useAirKit } from '../hooks/useAirKit';
 export const Navigation: React.FC = () => {
   // FIX: Destructure 'airService' from the hook
   // Add 'login' from the hook
-  const { userProfile, logout, airService, login } = useAirKit();
+  const { userProfile, logout, airService } = useAirKit();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userStats, setUserStats] = useState({
@@ -46,17 +46,6 @@ export const Navigation: React.FC = () => {
     }
   };
   
-  // NEW: Handler for connecting a new wallet
-  const handleConnectWallet = async () => {
-    setIsMobileMenuOpen(false);
-    try {
-      await login(); // Re-use the login function to connect/switch wallet
-    } catch (error) {
-      console.error('Failed to connect new wallet:', error);
-    }
-  };
-
-
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'PREMIUM': return 'bg-purple-100 text-purple-800';
@@ -216,14 +205,6 @@ export const Navigation: React.FC = () => {
                       <span>📜</span>
                       <span>Manage Credentials</span>
                     </Link>
-                    {/* FIX: Implement Connect Another Wallet */}
-                    <button
-                      onClick={handleConnectWallet}
-                      className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                    >
-                      <span>🔗</span>
-                      <span>Connect Another Wallet</span>
-                    </button>
                   </div>
 
                   {/* Support & Logout */}

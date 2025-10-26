@@ -168,76 +168,84 @@ router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res)
  * @route GET /api/airkit/profile
  */
 router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res) => {
-  try {
-    const user = (req as any).user; // Use (req as any) to bypass potential strict type issues
-
-    // Get enhanced profile from AIR Account
-    const airProfile = await airAccount.getUserProfile(user.airId);
-
-    // Get user stats
-    const client = await pool.connect();
     try {
-      const credentialsCount = await client.query(
-        'SELECT COUNT(*) FROM credentials WHERE user_id = $1 AND is_revoked = false',
-        [user.id]
-      );
+        const user = (req as any).user;
 
-      // FIX: Fetch the user record from the 'users' table to get all details
-      const userResult = await client.query(
-        'SELECT * FROM users WHERE id = $1',
-        [user.id]
-      );
-      
-      if (userResult.rows.length === 0) {
-        return res.status(404).json({ success: false, error: 'User not found' });
-      }
-      
-      const dbUser = userResult.rows[0];
-      console.log('Fetched email:', dbUser.email);
+        // Get enhanced profile from AIR Account
+        const airProfile = await airAccount.getUserProfile(user.airId);
 
-      const proofsCount = await client.query(
-        'SELECT COUNT(*) FROM zk_proofs WHERE user_id = $1',
-        [user.id]
-      );
+        // Get user stats and wallets
+        const client = await pool.connect();
+        try {
+            // Fetch user, counts, reputation, AND additional wallets in one go
+            const profileResult = await client.query(
+               `SELECT
+                    u.*,
+                    (SELECT COUNT(*) FROM credentials WHERE user_id = u.id AND is_revoked = false) as credential_count,
+                    (SELECT COUNT(*) FROM zk_proofs WHERE user_id = u.id) as proof_count,
+                    rs.overall_score as reputation_score,
+                    COALESCE(
+                        (SELECT json_agg(uw.* ORDER BY uw.connected_at DESC)
+                         FROM user_wallets uw
+                         WHERE uw.user_id = u.id),
+                        '[]'::json
+                    ) as additional_wallets
+                FROM users u
+                LEFT JOIN reputation_scores rs ON u.id = rs.user_id
+                WHERE u.id = $1`,
+                [user.id]
+            );
 
-      const reputationResult = await client.query(
-        'SELECT overall_score FROM reputation_scores WHERE user_id = $1',
-        [user.id]
-      );
+            if (profileResult.rows.length === 0) {
+                return res.status(404).json({ success: false, error: 'User not found' });
+            }
 
-      res.json({
-        success: true,
-        profile: {
-          // Send all details from the user table
-          id: dbUser.id,
-          airId: dbUser.air_id,
-          walletAddress: dbUser.wallet_address, // This is the primary wallet
-          email: dbUser.email,
-          createdAt: dbUser.created_at,
-          // ...user, // Original user object from token might be stale
-          airProfile: {
-            universalId: airProfile.universalId,
-            connectedChains: airProfile.connectedChains,
-            identityTier: airProfile.tier,
-            verificationStatus: airProfile.verificationStatus
-          },
-          stats: {
-            credentials: parseInt(credentialsCount.rows[0].count),
-            proofs: parseInt(proofsCount.rows[0].count),
-            reputation: reputationResult.rows[0]?.overall_score || 0
-          }
+            const dbUser = profileResult.rows[0];
+
+            // Process additional wallets (convert snake_case if needed)
+            const additionalWallets = dbUser.additional_wallets.map((w: any) => ({
+                id: w.id,
+                userId: w.user_id,
+                walletAddress: w.wallet_address,
+                chain: w.chain,
+                connectedAt: w.connected_at,
+                isPrimary: w.is_primary // Though primary is mainly determined by the users table
+            }));
+
+
+            res.json({
+                success: true,
+                profile: {
+                    id: dbUser.id,
+                    airId: dbUser.air_id,
+                    walletAddress: dbUser.wallet_address, // This is the primary wallet
+                    email: dbUser.email,
+                    createdAt: dbUser.created_at,
+                    airProfile: {
+                        universalId: airProfile.universalId,
+                        connectedChains: airProfile.connectedChains,
+                        identityTier: airProfile.tier || dbUser.reputationTier || 'BASIC', // Use tier from Moca or fallback
+                        verificationStatus: airProfile.verificationStatus
+                    },
+                    stats: {
+                        credentials: parseInt(dbUser.credential_count),
+                        proofs: parseInt(dbUser.proof_count),
+                        reputation: dbUser.reputation_score || 0
+                    },
+                    // Include the list of additional wallets
+                    additionalWallets: additionalWallets
+                }
+            });
+        } finally {
+            client.release();
         }
-      });
-    } finally {
-      client.release();
+    } catch (error) {
+        console.error('Profile fetch error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch profile'
+        });
     }
-  } catch (error) {
-    console.error('Profile fetch error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch profile'
-    });
-  }
 });
 
 /**
@@ -931,6 +939,45 @@ router.post('/wallet/connect', authenticateToken, async (req: AuthenticatedReque
       error: 'Wallet connection failed'
     });
   }
+});
+
+router.post('/wallet/add', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+        const user = (req as any).user;
+        const { walletAddress, chain } = req.body;
+
+        if (!walletAddress || !chain) {
+            return res.status(400).json({ success: false, error: 'walletAddress and chain are required' });
+        }
+
+        const client = await pool.connect();
+        try {
+            // Insert the new wallet, avoiding duplicates for the same user
+            // is_primary defaults to false in the migration script
+            const insertResult = await client.query(
+                `INSERT INTO user_wallets (user_id, wallet_address, chain)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (user_id, wallet_address) DO NOTHING
+                 RETURNING *`,
+                [user.id, walletAddress, chain]
+            );
+
+            res.json({
+                success: true,
+                message: 'Wallet added successfully',
+                wallet: insertResult.rows[0] || { info: 'Wallet already associated with this user.' } // Return inserted row or info
+            });
+        } finally {
+            client.release();
+        }
+    } catch (error: any) {
+        console.error('Add wallet error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to add wallet',
+            details: process.env.NODE_ENV === 'production' ? undefined : error.message
+        });
+    }
 });
 
 // (Helper functions prepareReputationInputs and updateUserReputation are unchanged)
