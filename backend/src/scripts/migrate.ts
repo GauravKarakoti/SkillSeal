@@ -1,4 +1,4 @@
-import { pool } from '../config/database';
+import { pool } from '../config/database.ts';
 
 async function runMigrations() {
   const client = await pool.connect();

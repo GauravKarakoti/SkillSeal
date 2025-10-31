@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
-import { pool } from '../config/database';
+import express from 'express';
+import { pool } from '../config/database.ts';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends express.Request {
   user?: {
     id: number;
     airId: string;
@@ -13,8 +13,8 @@ export interface AuthenticatedRequest extends Request {
 
 export const authenticateToken = async (
   req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
+  res: express.Response,
+  next: express.NextFunction
 ) => {
   try {
     const authHeader = req.headers.authorization;
@@ -72,7 +72,7 @@ export const authenticateToken = async (
 };
 
 export const requireRole = (requiredRole: string) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     // Role-based access control middleware
     // This can be extended based on your role system
     if (!req.user) {
@@ -85,8 +85,8 @@ export const requireRole = (requiredRole: string) => {
 export const errorHandler = (
   error: Error,
   req: Request,
-  res: Response,
-  next: NextFunction
+  res: express.Response,
+  next: express.NextFunction
 ) => {
   console.error('Error:', error);
 

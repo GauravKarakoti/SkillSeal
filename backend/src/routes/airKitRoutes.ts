@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
-import { validateRequest, userRegistrationSchema } from '../middleware/validation';
-import { CredentialModel } from '../models/Credential';
-import { ProofModel } from '../models/Proof';
-import { pool } from '../config/database';
+import { authenticateToken } from '../middleware/auth.ts';
+import { AuthenticatedRequest } from '../middleware/auth.ts';
+import { validateRequest, userRegistrationSchema } from '../middleware/validation.ts';
+import { CredentialModel } from '../models/Credential.ts';
+import { ProofModel } from '../models/Proof.ts';
+import { pool } from '../config/database.ts';
 import dotenv from 'dotenv';
 import * as snarkjs from 'snarkjs';
 import fs from 'fs';
@@ -11,7 +12,7 @@ import path from 'path';
 // --- END OF ADDITIONS ---
 
 // --- Import your real credential service ---
-import { credentialService } from '../services/credentialService';
+import { credentialService } from '../services/credentialService.ts';
 
 dotenv.config();
 

@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { runMigrations } from '../scripts/migrate';
+import { runMigrations } from '../scripts/migrate.ts';
 import dotenv from 'dotenv';
 dotenv.config();
 

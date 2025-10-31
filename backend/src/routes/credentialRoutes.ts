@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { credentialService } from '../services/credentialService';
+import { credentialService } from '../services/credentialService.ts';
 import dotenv from 'dotenv';
 dotenv.config();
 

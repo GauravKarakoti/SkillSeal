@@ -4,8 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 
-import { airKitRoutes } from './routes/airKitRoutes';
-import { credentialRoutes } from './routes/credentialRoutes';
+import { airKitRoutes } from './routes/airKitRoutes.ts';
+import { credentialRoutes } from './routes/credentialRoutes.ts';
 
 dotenv.config();
 
