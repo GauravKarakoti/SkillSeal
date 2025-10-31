@@ -3,7 +3,7 @@ import { credentialService } from '../services/credentialService.ts';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const router = Router();
+const router: Router = Router();
 
 // Issue a new credential
 router.post('/issue', async (req, res) => {

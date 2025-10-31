@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.ts';
-import { AuthenticatedRequest } from '../middleware/auth.ts';
+import type { AuthenticatedRequest } from '../middleware/auth.ts';
 import { validateRequest, userRegistrationSchema } from '../middleware/validation.ts';
 import { CredentialModel } from '../models/Credential.ts';
 import { ProofModel } from '../models/Proof.ts';
@@ -9,13 +9,12 @@ import dotenv from 'dotenv';
 import * as snarkjs from 'snarkjs';
 import fs from 'fs';
 import path from 'path';
-// --- END OF ADDITIONS ---
-
-// --- Import your real credential service ---
+import { fileURLToPath } from 'url';
 import { credentialService } from '../services/credentialService.ts';
 
 dotenv.config();
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // --- WARNING: DEVELOPMENT MOCK ---
 // The real `airAccount` import is removed due to package errors.
 // This mock object bypasses all Moca Network verification and is NOT SECURE.
@@ -49,7 +48,7 @@ const airAccount = {
   })
 };
 
-const router = Router();
+const router: Router = Router();
 
 // --- Define paths to your compiled circuit products ---
 // Using your updated path

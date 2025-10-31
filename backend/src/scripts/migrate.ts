@@ -1,4 +1,5 @@
 import { pool } from '../config/database.ts';
+import { fileURLToPath } from 'url';
 
 async function runMigrations() {
   const client = await pool.connect();
@@ -61,8 +62,13 @@ async function runMigrations() {
   }
 }
 
-if (require.main === module) {
-  runMigrations().catch(console.error);
-}
+const currentModulePath = fileURLToPath(import.meta.url);
+const executedScriptPath = process.argv[1];
 
+if (currentModulePath === executedScriptPath) {
+  runMigrations().catch(err => {
+    console.error('Migration execution failed:', err);
+    process.exit(1); // Exit with an error code
+  });
+}
 export { runMigrations };
