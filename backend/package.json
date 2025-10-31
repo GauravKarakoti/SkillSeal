@@ -19,12 +19,12 @@
     "@types/node": "^24.9.1",
     "@types/pg": "^8.15.5",
     "@types/snarkjs": "^0.7.9",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "@mocanetwork/airkit": "^1.6.0",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
