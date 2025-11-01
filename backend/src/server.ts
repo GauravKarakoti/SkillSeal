@@ -1,13 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 
 import { airKitRoutes } from './routes/airKitRoutes.ts';
 import { credentialRoutes } from './routes/credentialRoutes.ts';
 
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
